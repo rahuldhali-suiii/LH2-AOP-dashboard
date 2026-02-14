@@ -1,0 +1,17 @@
+# render.yaml - Render Blueprint for LH2 AOP Dashboard
+# This file allows one-click deployment to Render
+
+services:
+  - type: web
+    name: lh2-aop-dashboard
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
