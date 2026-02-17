@@ -37,7 +37,7 @@ try {
   process.exit(1);
 }
 
-// Create table
+// Create table (V11: Added lh2_indirect_costs and saas_revenue columns)
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_state (
     id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -47,14 +47,32 @@ db.exec(`
     synd_configs TEXT,
     hiring_plans TEXT,
     disc_configs TEXT,
+    lh2_indirect_costs TEXT,
+    saas_revenue TEXT,
     last_updated TEXT,
     updated_by TEXT
   )
 `);
-console.log("✅ Database table ready");
+
+// V11: Migration - Add new columns if they don't exist (for existing databases)
+try {
+  db.exec(`ALTER TABLE app_state ADD COLUMN lh2_indirect_costs TEXT`);
+  console.log("✅ Added lh2_indirect_costs column");
+} catch (e) {
+  // Column already exists, ignore
+}
+
+try {
+  db.exec(`ALTER TABLE app_state ADD COLUMN saas_revenue TEXT`);
+  console.log("✅ Added saas_revenue column");
+} catch (e) {
+  // Column already exists, ignore
+}
+
+console.log("✅ Database table ready (V11)");
 
 // ====================
-// Default State (matches V8 App.jsx INITIAL values)
+// Default State (V11: Added lh2IndirectCosts and saasRevenue)
 // ====================
 const getDefaultState = () => ({
   overhead: { salary: 47000, tech: 4855, admin: 12800 },
@@ -74,6 +92,9 @@ const getDefaultState = () => ({
   syndConfigs: null,
   hiringPlans: null,
   discConfigs: null,
+  // V11: New fields - MOM arrays for 10 months (Mar-Dec)
+  lh2IndirectCosts: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  saasRevenue: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   lastUpdated: new Date().toISOString(),
   updatedBy: "system",
 });
@@ -94,8 +115,8 @@ const initializeState = () => {
     const defaultState = getDefaultState();
     db.prepare(
       `
-      INSERT INTO app_state (id, overhead, rpm_seasonality, baseline_data, synd_configs, hiring_plans, disc_configs, last_updated, updated_by)
-      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO app_state (id, overhead, rpm_seasonality, baseline_data, synd_configs, hiring_plans, disc_configs, lh2_indirect_costs, saas_revenue, last_updated, updated_by)
+      VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `,
     ).run(
       JSON.stringify(defaultState.overhead),
@@ -104,21 +125,23 @@ const initializeState = () => {
       JSON.stringify(defaultState.syndConfigs),
       JSON.stringify(defaultState.hiringPlans),
       JSON.stringify(defaultState.discConfigs),
+      JSON.stringify(defaultState.lh2IndirectCosts),
+      JSON.stringify(defaultState.saasRevenue),
       defaultState.lastUpdated,
       defaultState.updatedBy,
     );
-    console.log("✅ Initialized database with default state");
+    console.log("✅ Initialized database with default state (V11)");
   } else {
     console.log("✅ Existing state found in database");
   }
 };
 
-// Load state from database
+// Load state from database (V11: Added lh2IndirectCosts and saasRevenue)
 const loadState = () => {
   const row = db
     .prepare(
       `
-    SELECT overhead, rpm_seasonality, baseline_data, synd_configs, hiring_plans, disc_configs, last_updated, updated_by
+    SELECT overhead, rpm_seasonality, baseline_data, synd_configs, hiring_plans, disc_configs, lh2_indirect_costs, saas_revenue, last_updated, updated_by
     FROM app_state WHERE id = 1
   `,
     )
@@ -135,12 +158,15 @@ const loadState = () => {
     syndConfigs: JSON.parse(row.synd_configs),
     hiringPlans: JSON.parse(row.hiring_plans),
     discConfigs: JSON.parse(row.disc_configs),
+    // V11: Load new fields with fallback to default arrays
+    lh2IndirectCosts: row.lh2_indirect_costs ? JSON.parse(row.lh2_indirect_costs) : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    saasRevenue: row.saas_revenue ? JSON.parse(row.saas_revenue) : [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     lastUpdated: row.last_updated,
     updatedBy: row.updated_by,
   };
 };
 
-// Save state to database
+// Save state to database (V11: Added lh2IndirectCosts and saasRevenue)
 const saveState = (state) => {
   const lastUpdated = new Date().toISOString();
 
@@ -153,6 +179,8 @@ const saveState = (state) => {
       synd_configs = ?,
       hiring_plans = ?,
       disc_configs = ?,
+      lh2_indirect_costs = ?,
+      saas_revenue = ?,
       last_updated = ?,
       updated_by = ?
     WHERE id = 1
@@ -164,6 +192,8 @@ const saveState = (state) => {
     JSON.stringify(state.syndConfigs),
     JSON.stringify(state.hiringPlans),
     JSON.stringify(state.discConfigs),
+    JSON.stringify(state.lh2IndirectCosts || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    JSON.stringify(state.saasRevenue || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
     lastUpdated,
     state.updatedBy || "user",
   );
@@ -171,7 +201,7 @@ const saveState = (state) => {
   return lastUpdated;
 };
 
-// Reset state to defaults
+// Reset state to defaults (V11: Includes new fields)
 const resetState = () => {
   const defaultState = getDefaultState();
 
@@ -184,6 +214,8 @@ const resetState = () => {
       synd_configs = ?,
       hiring_plans = ?,
       disc_configs = ?,
+      lh2_indirect_costs = ?,
+      saas_revenue = ?,
       last_updated = ?,
       updated_by = ?
     WHERE id = 1
@@ -195,6 +227,8 @@ const resetState = () => {
     JSON.stringify(defaultState.syndConfigs),
     JSON.stringify(defaultState.hiringPlans),
     JSON.stringify(defaultState.discConfigs),
+    JSON.stringify(defaultState.lh2IndirectCosts),
+    JSON.stringify(defaultState.saasRevenue),
     defaultState.lastUpdated,
     "system-reset",
   );
@@ -213,7 +247,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.static(join(__dirname, "dist")));
 
 // ====================
-// API Routes (match V8 App.jsx exactly)
+// API Routes
 // ====================
 
 // Health check
@@ -268,7 +302,7 @@ app.get("*", (req, res) => {
 // ====================
 app.listen(PORT, "0.0.0.0", () => {
   console.log("==================================");
-  console.log("🚀 LH2 AOP Dashboard Server");
+  console.log("🚀 LH2 AOP Dashboard Server (V11)");
   console.log(`📍 Port: ${PORT}`);
   console.log(`📁 Database: ${DB_FILE}`);
   console.log("==================================");
