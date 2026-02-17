@@ -895,9 +895,9 @@ const HiringPlanTab = ({ hiringPlans, setHiringPlans, brandNames }) => {
 // COLLAPSIBLE ROW COMPONENT FOR OVERVIEW
 // ============================================
 const CollapsibleRow = ({ label, data, total, brandData, color, isExpanded, onToggle }) => {
-  const bgColor = color === 'purple' ? 'bg-purple-50' : color === 'green' ? 'bg-green-50' : color === 'indigo' ? 'bg-indigo-50' : color === 'blue' ? 'bg-blue-50' : '';
-  const textColor = color === 'purple' ? 'text-purple-700' : color === 'green' ? 'text-green-700' : color === 'indigo' ? 'text-indigo-700' : color === 'blue' ? 'text-blue-700' : '';
-  const bgColorDark = color === 'purple' ? 'bg-purple-100' : color === 'green' ? 'bg-green-100' : color === 'indigo' ? 'bg-indigo-100' : color === 'blue' ? 'bg-blue-100' : 'bg-gray-50';
+  const bgColor = color === 'purple' ? 'bg-purple-50' : color === 'green' ? 'bg-green-50' : color === 'indigo' ? 'bg-indigo-50' : color === 'blue' ? 'bg-blue-50' : color === 'orange' ? 'bg-orange-50' : '';
+  const textColor = color === 'purple' ? 'text-purple-700' : color === 'green' ? 'text-green-700' : color === 'indigo' ? 'text-indigo-700' : color === 'blue' ? 'text-blue-700' : color === 'orange' ? 'text-orange-700' : '';
+  const bgColorDark = color === 'purple' ? 'bg-purple-100' : color === 'green' ? 'bg-green-100' : color === 'indigo' ? 'bg-indigo-100' : color === 'blue' ? 'bg-blue-100' : color === 'orange' ? 'bg-orange-100' : 'bg-gray-50';
 
   return (
     <>
@@ -921,6 +921,27 @@ const CollapsibleRow = ({ label, data, total, brandData, color, isExpanded, onTo
         </tr>
       ))}
     </>
+  );
+};
+
+// ============================================
+// SIMPLE ROW COMPONENT (Non-Collapsible)
+// ============================================
+const SimpleRow = ({ label, data, total, color, bold = false }) => {
+  const bgColor = color === 'purple' ? 'bg-purple-50' : color === 'green' ? 'bg-green-50' : color === 'indigo' ? 'bg-indigo-50' : color === 'blue' ? 'bg-blue-50' : color === 'orange' ? 'bg-orange-50' : color === 'red' ? 'bg-red-50' : '';
+  const textColor = color === 'purple' ? 'text-purple-700' : color === 'green' ? 'text-green-700' : color === 'indigo' ? 'text-indigo-700' : color === 'blue' ? 'text-blue-700' : color === 'orange' ? 'text-orange-700' : color === 'red' ? 'text-red-700' : '';
+  const bgColorDark = color === 'purple' ? 'bg-purple-100' : color === 'green' ? 'bg-green-100' : color === 'indigo' ? 'bg-indigo-100' : color === 'blue' ? 'bg-blue-100' : color === 'orange' ? 'bg-orange-100' : color === 'red' ? 'bg-red-100' : 'bg-gray-50';
+
+  return (
+    <tr className={`${bgColor}`}>
+      <td className={`px-2 py-1 ${textColor} ${bold ? 'font-bold' : 'font-medium'} pl-6`}>
+        {label}
+      </td>
+      {data.map((val, i) => (
+        <td key={i} className={`px-2 py-1 text-right ${textColor} ${bold ? 'font-bold' : ''}`}>{fmt(val)}</td>
+      ))}
+      <td className={`px-2 py-1 text-right ${bgColorDark} ${bold ? 'font-bold' : 'font-medium'} ${textColor}`}>{fmt(total)}</td>
+    </tr>
   );
 };
 
@@ -952,13 +973,17 @@ export default function App() {
   const [lastSaved, setLastSaved] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   
-  // Expanded rows state for Overview tab
+  // V11: New state for Indirect Costs and SaaS Revenue (MOM arrays)
+  const [lh2IndirectCosts, setLh2IndirectCosts] = useState(MONTHS.map(() => 0));
+  const [saasRevenue, setSaasRevenue] = useState(MONTHS.map(() => 0));
+  
+  // Expanded rows state for Overview tab - V11 updated
   const [expandedRows, setExpandedRows] = useState({
-    syndRev: false,
-    syndLh2Net: false,
-    discRev: false,
-    discLh2Net: false,
-    totalLh2Net: false
+    totalGrossRev: false,
+    lh2ShareRev: false,
+    totalDirectCosts: false,
+    lh2ShareCosts: false,
+    lh2GrossProfit: false
   });
 
   const toggleRow = (row) => setExpandedRows(prev => ({ ...prev, [row]: !prev[row] }));
@@ -975,6 +1000,9 @@ export default function App() {
           if (json.data.syndConfigs) setSyndConfigs(json.data.syndConfigs);
           if (json.data.hiringPlans) setHiringPlans(json.data.hiringPlans);
           if (json.data.discConfigs) setDiscConfigs(json.data.discConfigs);
+          // V11: Load new fields
+          if (json.data.lh2IndirectCosts) setLh2IndirectCosts(json.data.lh2IndirectCosts);
+          if (json.data.saasRevenue) setSaasRevenue(json.data.saasRevenue);
           if (json.data.lastUpdated) setLastSaved(new Date(json.data.lastUpdated).toLocaleTimeString());
         }
         setSaveStatus('saved');
@@ -991,7 +1019,18 @@ export default function App() {
       const res = await fetch(`${API_BASE}/api/state`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overhead, rpmSeasonality, baselineData, syndConfigs, hiringPlans, discConfigs, updatedBy: 'user' })
+        body: JSON.stringify({ 
+          overhead, 
+          rpmSeasonality, 
+          baselineData, 
+          syndConfigs, 
+          hiringPlans, 
+          discConfigs,
+          // V11: Save new fields
+          lh2IndirectCosts,
+          saasRevenue,
+          updatedBy: 'user' 
+        })
       });
       const json = await res.json();
       if (json.success) {
@@ -1004,14 +1043,14 @@ export default function App() {
       console.error('Failed to save:', error);
       setSaveStatus('error');
     }
-  }, [overhead, rpmSeasonality, baselineData, syndConfigs, hiringPlans, discConfigs, isLoaded]);
+  }, [overhead, rpmSeasonality, baselineData, syndConfigs, hiringPlans, discConfigs, lh2IndirectCosts, saasRevenue, isLoaded]);
 
-  // Debounced auto-save
+  // Debounced auto-save - V11: Added lh2IndirectCosts and saasRevenue
   useEffect(() => {
     if (!isLoaded) return;
     const timer = setTimeout(saveData, 1000);
     return () => clearTimeout(timer);
-  }, [overhead, rpmSeasonality, baselineData, syndConfigs, hiringPlans, discConfigs, isLoaded, saveData]);
+  }, [overhead, rpmSeasonality, baselineData, syndConfigs, hiringPlans, discConfigs, lh2IndirectCosts, saasRevenue, isLoaded, saveData]);
 
   // Reset to defaults
   const handleReset = async () => {
@@ -1060,23 +1099,36 @@ export default function App() {
     }
   };
 
-  // P&L calculations with brand-level detail
+  // V11: Updated P&L calculations with brand-level detail for all required metrics
   const { pnl, brandPnl } = useMemo(() => {
     const syndBrandData = {};
     const discBrandData = {};
     
-    // Initialize brand data
+    // Initialize brand data with all required metrics
     Object.keys(syndConfigs).forEach(brand => {
-      syndBrandData[brand] = { rev: [], lh2Net: [] };
+      syndBrandData[brand] = { 
+        totalRev: [], 
+        lh2Rev: [], 
+        totalCost: [], 
+        lh2Cost: [], 
+        lh2GrossProfit: [] 
+      };
     });
     Object.keys(discConfigs).forEach(brand => {
-      discBrandData[brand] = { rev: [], lh2Net: [] };
+      discBrandData[brand] = { 
+        totalRev: [], 
+        lh2Rev: [], 
+        totalCost: [], 
+        lh2Cost: [], 
+        lh2GrossProfit: [] 
+      };
     });
 
     const pnlData = MONTHS.map((m, i) => {
-      let syndTotalRev = 0, syndLh2Net = 0, discTotalRev = 0, discLh2Net = 0;
+      let totalGrossRev = 0, totalLh2Rev = 0, totalDirectCosts = 0, totalLh2Costs = 0;
       const seasonality = rpmSeasonality[m] || 1;
       
+      // Syndication brands
       Object.entries(syndConfigs).forEach(([brand, config]) => {
         const hiring = hiringPlans[brand] || getDefaultHiringPlan();
         const { authorSalary, editorSalary, videoEditorSalary } = config.salaries;
@@ -1094,74 +1146,116 @@ export default function App() {
         const baseEngagedViews = vidEditors * config.msnVideos.videosPerEditorPerDay * WORKING_DAYS * config.msnVideos.engagedViewsPerVideo;
         const vidRev = ((baseEngagedViews + ((config.msnVideos.momExtraEngagedViews || [])[i] || 0)) / 1000) * config.msnVideos.rpm * seasonality;
         
-        const totalRev = (progRev + syndRev + vidRev) * (config.successProbability / 100);
+        const brandTotalRev = (progRev + syndRev + vidRev) * (config.successProbability / 100);
         const directCost = totalAuthors * authorSalary + totalEditors * editorSalary + vidEditors * videoEditorSalary;
-        const totalCost = directCost * (1 + indirectCostsPct / 100);
+        const brandTotalCost = directCost * (1 + indirectCostsPct / 100);
         
-        const growthMultiple = config.baseRevenue > 0 ? totalRev / config.baseRevenue : 0;
+        const growthMultiple = config.baseRevenue > 0 ? brandTotalRev / config.baseRevenue : 0;
         const applicableSlab = getApplicableSlab(growthMultiple, config.revShareSlabs, config.baseRevenue, config.baseCosts);
         
         let lh2Rev, lh2Cost;
-        if (config.baseRevenue === 0 && config.baseCosts === 0) { lh2Rev = totalRev * applicableSlab; lh2Cost = totalCost * applicableSlab; }
-        else { lh2Rev = Math.max(0, totalRev - config.baseRevenue) * applicableSlab; lh2Cost = Math.max(0, totalCost - config.baseCosts) * applicableSlab; }
+        if (config.baseRevenue === 0 && config.baseCosts === 0) { 
+          lh2Rev = brandTotalRev * applicableSlab; 
+          lh2Cost = brandTotalCost * applicableSlab; 
+        } else { 
+          lh2Rev = Math.max(0, brandTotalRev - config.baseRevenue) * applicableSlab; 
+          lh2Cost = Math.max(0, brandTotalCost - config.baseCosts) * applicableSlab; 
+        }
         
-        const brandLh2Net = lh2Rev - lh2Cost;
+        const brandLh2GrossProfit = lh2Rev - lh2Cost;
         
-        syndTotalRev += totalRev;
-        syndLh2Net += brandLh2Net;
+        totalGrossRev += brandTotalRev;
+        totalLh2Rev += lh2Rev;
+        totalDirectCosts += brandTotalCost;
+        totalLh2Costs += lh2Cost;
         
-        syndBrandData[brand].rev.push(Math.round(totalRev));
-        syndBrandData[brand].lh2Net.push(Math.round(brandLh2Net));
+        syndBrandData[brand].totalRev.push(Math.round(brandTotalRev));
+        syndBrandData[brand].lh2Rev.push(Math.round(lh2Rev));
+        syndBrandData[brand].totalCost.push(Math.round(brandTotalCost));
+        syndBrandData[brand].lh2Cost.push(Math.round(lh2Cost));
+        syndBrandData[brand].lh2GrossProfit.push(Math.round(brandLh2GrossProfit));
       });
       
+      // Discover brands
       Object.entries(discConfigs).forEach(([brand, config]) => {
         const traffic = config.baseTraffic * (1 + (config.trafficGrowth[i] || 0) / 100);
         const isAfterTransition = i >= MONTHS.indexOf(config.transitionMonth);
         const effectiveRpm = (config.rpmUplift !== 1.0 && isAfterTransition ? config.baseRpm * config.rpmUplift : config.baseRpm) * seasonality;
         
-        const rev = (traffic / 1000) * effectiveRpm * (config.successProbability / 100);
-        const totalCost = (config.baseCost || 0) + (config.directCosts?.[i] || 0);
+        const brandTotalRev = (traffic / 1000) * effectiveRpm * (config.successProbability / 100);
+        const brandTotalCost = (config.baseCost || 0) + (config.directCosts?.[i] || 0);
         
-        const growthMultiple = config.baseRevenue > 0 ? rev / config.baseRevenue : 0;
+        const growthMultiple = config.baseRevenue > 0 ? brandTotalRev / config.baseRevenue : 0;
         const applicableSlab = getApplicableSlab(growthMultiple, config.revShareSlabs, config.baseRevenue, config.baseCostsLH2);
         
         let lh2Rev, lh2Cost;
-        if (config.baseRevenue === 0 && config.baseCostsLH2 === 0) { lh2Rev = rev * applicableSlab; lh2Cost = totalCost * applicableSlab; }
-        else { lh2Rev = Math.max(0, rev - config.baseRevenue) * applicableSlab; lh2Cost = Math.max(0, totalCost - config.baseCostsLH2) * applicableSlab; }
+        if (config.baseRevenue === 0 && config.baseCostsLH2 === 0) { 
+          lh2Rev = brandTotalRev * applicableSlab; 
+          lh2Cost = brandTotalCost * applicableSlab; 
+        } else { 
+          lh2Rev = Math.max(0, brandTotalRev - config.baseRevenue) * applicableSlab; 
+          lh2Cost = Math.max(0, brandTotalCost - config.baseCostsLH2) * applicableSlab; 
+        }
         
-        const brandLh2Net = lh2Rev - lh2Cost;
+        const brandLh2GrossProfit = lh2Rev - lh2Cost;
         
-        discTotalRev += rev;
-        discLh2Net += brandLh2Net;
+        totalGrossRev += brandTotalRev;
+        totalLh2Rev += lh2Rev;
+        totalDirectCosts += brandTotalCost;
+        totalLh2Costs += lh2Cost;
         
-        discBrandData[brand].rev.push(Math.round(rev));
-        discBrandData[brand].lh2Net.push(Math.round(brandLh2Net));
+        discBrandData[brand].totalRev.push(Math.round(brandTotalRev));
+        discBrandData[brand].lh2Rev.push(Math.round(lh2Rev));
+        discBrandData[brand].totalCost.push(Math.round(brandTotalCost));
+        discBrandData[brand].lh2Cost.push(Math.round(lh2Cost));
+        discBrandData[brand].lh2GrossProfit.push(Math.round(brandLh2GrossProfit));
       });
       
-      const totalRev = syndTotalRev + discTotalRev;
-      const oh = overhead.salary + overhead.tech + overhead.admin;
-      const totalLh2Net = syndLh2Net + discLh2Net;
+      const lh2GrossProfit = totalLh2Rev - totalLh2Costs;
+      const indirectCost = lh2IndirectCosts[i] || 0;
+      const saas = saasRevenue[i] || 0;
+      const lh2NetProfit = lh2GrossProfit + saas - indirectCost;
       
-      return { month: m, syndRev: Math.round(syndTotalRev), syndLh2Net: Math.round(syndLh2Net), discRev: Math.round(discTotalRev), discLh2Net: Math.round(discLh2Net), totalRev: Math.round(totalRev), totalLh2Net: Math.round(totalLh2Net), overhead: oh, netProfit: Math.round(totalLh2Net - oh), margin: totalRev > 0 ? ((totalLh2Net - oh) / totalRev * 100) : 0 };
+      return { 
+        month: m, 
+        totalGrossRev: Math.round(totalGrossRev), 
+        lh2ShareRev: Math.round(totalLh2Rev), 
+        totalDirectCosts: Math.round(totalDirectCosts), 
+        lh2ShareCosts: Math.round(totalLh2Costs),
+        lh2GrossProfit: Math.round(lh2GrossProfit),
+        indirectCost: Math.round(indirectCost),
+        saasRevenue: Math.round(saas),
+        lh2NetProfit: Math.round(lh2NetProfit)
+      };
     });
 
     return { pnl: pnlData, brandPnl: { synd: syndBrandData, disc: discBrandData } };
-  }, [syndConfigs, hiringPlans, discConfigs, rpmSeasonality, overhead]);
+  }, [syndConfigs, hiringPlans, discConfigs, rpmSeasonality, lh2IndirectCosts, saasRevenue]);
 
-  const totals = pnl.reduce((a, p) => ({ syndRev: a.syndRev + p.syndRev, syndLh2Net: a.syndLh2Net + p.syndLh2Net, discRev: a.discRev + p.discRev, discLh2Net: a.discLh2Net + p.discLh2Net, totalRev: a.totalRev + p.totalRev, totalLh2Net: a.totalLh2Net + p.totalLh2Net, overhead: a.overhead + p.overhead, netProfit: a.netProfit + p.netProfit }), { syndRev: 0, syndLh2Net: 0, discRev: 0, discLh2Net: 0, totalRev: 0, totalLh2Net: 0, overhead: 0, netProfit: 0 });
+  const totals = pnl.reduce((a, p) => ({ 
+    totalGrossRev: a.totalGrossRev + p.totalGrossRev, 
+    lh2ShareRev: a.lh2ShareRev + p.lh2ShareRev, 
+    totalDirectCosts: a.totalDirectCosts + p.totalDirectCosts, 
+    lh2ShareCosts: a.lh2ShareCosts + p.lh2ShareCosts,
+    lh2GrossProfit: a.lh2GrossProfit + p.lh2GrossProfit,
+    indirectCost: a.indirectCost + p.indirectCost,
+    saasRevenue: a.saasRevenue + p.saasRevenue,
+    lh2NetProfit: a.lh2NetProfit + p.lh2NetProfit
+  }), { totalGrossRev: 0, lh2ShareRev: 0, totalDirectCosts: 0, lh2ShareCosts: 0, lh2GrossProfit: 0, indirectCost: 0, saasRevenue: 0, lh2NetProfit: 0 });
 
-  // Helper to get brand data for collapsible rows
-  const getSyndBrandData = (metric) => Object.entries(brandPnl.synd).map(([brand, data]) => ({
-    brand,
-    values: data[metric],
-    total: data[metric].reduce((s, v) => s + v, 0)
-  }));
-
-  const getDiscBrandData = (metric) => Object.entries(brandPnl.disc).map(([brand, data]) => ({
-    brand,
-    values: data[metric],
-    total: data[metric].reduce((s, v) => s + v, 0)
-  }));
+  // Helper to get brand data for collapsible rows - V11: All brands combined
+  const getAllBrandData = (metric) => [
+    ...Object.entries(brandPnl.synd).map(([brand, data]) => ({
+      brand: `📝 ${brand}`,
+      values: data[metric],
+      total: data[metric].reduce((s, v) => s + v, 0)
+    })),
+    ...Object.entries(brandPnl.disc).map(([brand, data]) => ({
+      brand: `🔍 ${brand}`,
+      values: data[metric],
+      total: data[metric].reduce((s, v) => s + v, 0)
+    }))
+  ];
 
   const Tab = ({ id, children }) => <button onClick={() => setTab(id)} className={`px-3 py-2 text-sm font-medium rounded-t-lg ${tab === id ? 'bg-white text-blue-600 border-t border-l border-r' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{children}</button>;
 
@@ -1196,85 +1290,110 @@ export default function App() {
         {tab === 'overview' && (
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="text-xl font-bold mb-4">Consolidated P&L (Mar - Dec 2026)</h3>
+            {/* V11: Updated 4 cards */}
             <div className="grid grid-cols-4 gap-3 mb-4">
-              <Card title="Total Revenue" value={fmt(totals.totalRev)} color="blue" />
-              <Card title="Synd LH2 Net" value={fmt(totals.syndLh2Net)} sub="After rev share" color="purple" />
-              <Card title="Discover LH2 Net" value={fmt(totals.discLh2Net)} sub="After rev share" color="green" />
-              <Card title="LH2 Gross Profit" value={fmt(totals.totalLh2Net)} sub={`${(totals.totalLh2Net / totals.totalRev * 100).toFixed(1)}% margin`} color={totals.totalLh2Net >= 0 ? 'green' : 'orange'} />
+              <Card title="Total Revenue" value={fmt(totals.totalGrossRev)} color="blue" />
+              <Card title="LH2 Share of Revenue" value={fmt(totals.lh2ShareRev)} sub={`${(totals.lh2ShareRev / totals.totalGrossRev * 100 || 0).toFixed(1)}% of total`} color="purple" />
+              <Card title="LH2 Gross Profit" value={fmt(totals.lh2GrossProfit)} sub={`${(totals.lh2GrossProfit / totals.totalGrossRev * 100 || 0).toFixed(1)}% margin`} color="green" />
+              <Card title="LH2 Net Profit" value={fmt(totals.lh2NetProfit)} sub={`After indirect costs`} color={totals.lh2NetProfit >= 0 ? 'green' : 'orange'} />
             </div>
+            {/* V11: Clustered bar chart */}
             <div className="h-64 mb-4">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={pnl}>
+                <BarChart data={pnl}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis tickFormatter={v => `$${(v/1000).toFixed(0)}K`} />
                   <Tooltip formatter={(v, n) => fmt(v)} />
                   <Legend />
-                  <Bar dataKey="syndLh2Net" name="Synd LH2 Net" fill="#8b5cf6" stackId="r" />
-                  <Bar dataKey="discLh2Net" name="Discover LH2 Net" fill="#10b981" stackId="r" />
-                </ComposedChart>
+                  <Bar dataKey="totalGrossRev" name="Total Gross Revenue" fill="#3b82f6" />
+                  <Bar dataKey="lh2GrossProfit" name="LH2 Gross Profit" fill="#10b981" />
+                  <Bar dataKey="lh2NetProfit" name="LH2 Net Profit" fill="#8b5cf6" />
+                </BarChart>
               </ResponsiveContainer>
             </div>
             <div className="text-xs text-gray-500 mb-2">💡 Click on rows with + to expand and see brand-wise breakdown</div>
+            {/* V11: Restructured table */}
             <table className="w-full text-xs">
               <thead><tr className="bg-gray-100"><th className="px-2 py-1 text-left">Item</th>{MONTHS.map(m => <th key={m} className="px-2 py-1 text-right">{m}</th>)}<th className="px-2 py-1 text-right bg-gray-200">TOTAL</th></tr></thead>
               <tbody>
-                {/* Syndication Total Rev - Collapsible */}
+                {/* a. Total Gross Revenue - Collapsible */}
                 <CollapsibleRow 
-                  label="Syndication Total Rev" 
-                  data={pnl.map(p => p.syndRev)} 
-                  total={totals.syndRev}
-                  brandData={getSyndBrandData('rev')}
-                  color=""
-                  isExpanded={expandedRows.syndRev}
-                  onToggle={() => toggleRow('syndRev')}
+                  label="Total Gross Revenue" 
+                  data={pnl.map(p => p.totalGrossRev)} 
+                  total={totals.totalGrossRev}
+                  brandData={getAllBrandData('totalRev')}
+                  color="blue"
+                  isExpanded={expandedRows.totalGrossRev}
+                  onToggle={() => toggleRow('totalGrossRev')}
                 />
                 
-                {/* Synd LH2 Net - Collapsible */}
+                {/* b. LH2 Share of Gross Revenue - Collapsible */}
                 <CollapsibleRow 
-                  label="→ Synd LH2 Net" 
-                  data={pnl.map(p => p.syndLh2Net)} 
-                  total={totals.syndLh2Net}
-                  brandData={getSyndBrandData('lh2Net')}
+                  label="LH2 Share of Gross Revenue" 
+                  data={pnl.map(p => p.lh2ShareRev)} 
+                  total={totals.lh2ShareRev}
+                  brandData={getAllBrandData('lh2Rev')}
                   color="purple"
-                  isExpanded={expandedRows.syndLh2Net}
-                  onToggle={() => toggleRow('syndLh2Net')}
+                  isExpanded={expandedRows.lh2ShareRev}
+                  onToggle={() => toggleRow('lh2ShareRev')}
                 />
                 
-                {/* Discover Total Rev - Collapsible */}
+                {/* c. Total Direct Costs - Collapsible */}
                 <CollapsibleRow 
-                  label="Discover Total Rev" 
-                  data={pnl.map(p => p.discRev)} 
-                  total={totals.discRev}
-                  brandData={getDiscBrandData('rev')}
-                  color=""
-                  isExpanded={expandedRows.discRev}
-                  onToggle={() => toggleRow('discRev')}
+                  label="Total Direct Costs" 
+                  data={pnl.map(p => p.totalDirectCosts)} 
+                  total={totals.totalDirectCosts}
+                  brandData={getAllBrandData('totalCost')}
+                  color="orange"
+                  isExpanded={expandedRows.totalDirectCosts}
+                  onToggle={() => toggleRow('totalDirectCosts')}
                 />
                 
-                {/* Discover LH2 Net - Collapsible */}
+                {/* d. LH2 Share of Direct Costs - Collapsible */}
                 <CollapsibleRow 
-                  label="→ Discover LH2 Net" 
-                  data={pnl.map(p => p.discLh2Net)} 
-                  total={totals.discLh2Net}
-                  brandData={getDiscBrandData('lh2Net')}
-                  color="green"
-                  isExpanded={expandedRows.discLh2Net}
-                  onToggle={() => toggleRow('discLh2Net')}
+                  label="LH2 Share of Direct Costs" 
+                  data={pnl.map(p => p.lh2ShareCosts)} 
+                  total={totals.lh2ShareCosts}
+                  brandData={getAllBrandData('lh2Cost')}
+                  color="orange"
+                  isExpanded={expandedRows.lh2ShareCosts}
+                  onToggle={() => toggleRow('lh2ShareCosts')}
                 />
                 
-                {/* LH2 Gross Profit - Collapsible (shows all brands) */}
+                {/* e. LH2 Gross Profit - Collapsible */}
                 <CollapsibleRow 
                   label="LH2 Gross Profit" 
-                  data={pnl.map(p => p.totalLh2Net)} 
-                  total={totals.totalLh2Net}
-                  brandData={[...getSyndBrandData('lh2Net'), ...getDiscBrandData('lh2Net')]}
+                  data={pnl.map(p => p.lh2GrossProfit)} 
+                  total={totals.lh2GrossProfit}
+                  brandData={getAllBrandData('lh2GrossProfit')}
+                  color="green"
+                  isExpanded={expandedRows.lh2GrossProfit}
+                  onToggle={() => toggleRow('lh2GrossProfit')}
+                />
+                
+                {/* f. LH2 Indirect Cost - Non-collapsible */}
+                <SimpleRow 
+                  label="LH2 Indirect Cost" 
+                  data={pnl.map(p => p.indirectCost)} 
+                  total={totals.indirectCost}
+                  color="red"
+                />
+                
+                {/* g. LH2 Net Profit - Non-collapsible, bold */}
+                <SimpleRow 
+                  label="LH2 Net Profit" 
+                  data={pnl.map(p => p.lh2NetProfit)} 
+                  total={totals.lh2NetProfit}
                   color="indigo"
-                  isExpanded={expandedRows.totalLh2Net}
-                  onToggle={() => toggleRow('totalLh2Net')}
+                  bold={true}
                 />
               </tbody>
             </table>
+            <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
+              <strong>Formula:</strong> LH2 Net Profit = LH2 Gross Profit + SaaS Revenue − Indirect Costs
+              {totals.saasRevenue > 0 && <span className="ml-2 text-green-600">| SaaS Revenue: {fmt(totals.saasRevenue)}</span>}
+            </div>
           </div>
         )}
         
@@ -1312,6 +1431,66 @@ export default function App() {
         
         {tab === 'settings' && (
           <div className="space-y-6">
+            {/* V11: New Indirect Costs MOM Input */}
+            <div className="bg-white rounded-lg shadow p-4">
+              <h4 className="font-bold mb-3">🏢 LH2 Indirect Costs (MOM)</h4>
+              <p className="text-xs text-gray-500 mb-3">Monthly indirect costs deducted from LH2 Gross Profit to calculate LH2 Net Profit</p>
+              <div className="grid grid-cols-10 gap-1">
+                {MONTHS.map((m, i) => (
+                  <div key={m} className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">{m}</div>
+                    <input 
+                      type="number" 
+                      value={lh2IndirectCosts[i]} 
+                      onChange={e => { 
+                        const n = [...lh2IndirectCosts]; 
+                        n[i] = parseFloat(e.target.value) || 0; 
+                        setLh2IndirectCosts(n); 
+                      }} 
+                      className="w-full px-1 py-1 border rounded text-xs text-center" 
+                      step={100} 
+                    />
+                  </div>
+                ))}
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1">Total</div>
+                  <div className="px-1 py-1 bg-red-100 rounded text-xs font-bold text-red-700">
+                    {fmt(lh2IndirectCosts.reduce((s, v) => s + v, 0))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* V11: New SaaS Revenue MOM Input */}
+            <div className="bg-white rounded-lg shadow p-4">
+              <h4 className="font-bold mb-3">💻 SaaS Revenue (MOM)</h4>
+              <p className="text-xs text-gray-500 mb-3">Monthly SaaS revenue added to LH2 Gross Profit to calculate LH2 Net Profit</p>
+              <div className="grid grid-cols-10 gap-1">
+                {MONTHS.map((m, i) => (
+                  <div key={m} className="text-center">
+                    <div className="text-xs text-gray-500 mb-1">{m}</div>
+                    <input 
+                      type="number" 
+                      value={saasRevenue[i]} 
+                      onChange={e => { 
+                        const n = [...saasRevenue]; 
+                        n[i] = parseFloat(e.target.value) || 0; 
+                        setSaasRevenue(n); 
+                      }} 
+                      className="w-full px-1 py-1 border rounded text-xs text-center" 
+                      step={100} 
+                    />
+                  </div>
+                ))}
+                <div className="text-center">
+                  <div className="text-xs text-gray-500 mb-1">Total</div>
+                  <div className="px-1 py-1 bg-green-100 rounded text-xs font-bold text-green-700">
+                    {fmt(saasRevenue.reduce((s, v) => s + v, 0))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-lg shadow p-4">
               <h4 className="font-bold mb-3">📈 Blended RPM Seasonality (Multipliers)</h4>
               <p className="text-xs text-gray-500 mb-3">These multipliers apply to ALL Base RPMs across Syndication and Discover brands</p>
@@ -1343,7 +1522,8 @@ export default function App() {
                 <p><strong>Shareable Revenue</strong> = Total Revenue − Base Revenue (incremental only)</p>
                 <p><strong>LH2 Share of Revenue</strong> = Shareable Revenue × Applicable Slab %</p>
                 <p><strong>LH2 Share of Costs</strong> = (Total Costs − Base Costs) × Same Slab %</p>
-                <p><strong>LH2 Net Earnings</strong> = LH2 Revenue − LH2 Costs</p>
+                <p><strong>LH2 Gross Profit</strong> = LH2 Share of Revenue − LH2 Share of Costs</p>
+                <p><strong>LH2 Net Profit</strong> = LH2 Gross Profit + SaaS Revenue − Indirect Costs</p>
                 <div className="mt-3 p-2 bg-indigo-50 rounded text-xs">
                   <strong>Default Slabs:</strong> Up to 1.3x → 0% | ≥2x → 20% | ≥3x → 30% | &gt;3x → 50%
                 </div>
@@ -1366,7 +1546,7 @@ export default function App() {
       </main>
       
       <footer className="bg-gray-800 text-gray-400 text-center py-3 mt-6 text-sm">
-        LH2 AOP Dashboard v10.0 | Collapsible Overview | {lastSaved && `Last saved: ${lastSaved}`}
+        LH2 AOP Dashboard v11.0 | Indirect Costs & SaaS Revenue | {lastSaved && `Last saved: ${lastSaved}`}
       </footer>
 
       <AddBrandWizard isOpen={showAddBrandWizard} onClose={() => setShowAddBrandWizard(false)} onAddBrand={handleAddBrand} />
