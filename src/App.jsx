@@ -477,9 +477,9 @@ const AddBrandWizard = ({ isOpen, onClose, onAddBrand }) => {
 };
 
 // ============================================
-// SYNDICATION BRAND CARD
+// SYNDICATION BRAND CARD (V12: Added onDelete prop)
 // ============================================
-const SyndCard = ({ brand, data, config, setConfig, rpmSeasonality, hiringPlan }) => {
+const SyndCard = ({ brand, data, config, setConfig, rpmSeasonality, hiringPlan, onDelete }) => {
   const proj = useMemo(() => {
     return MONTHS.map((m, i) => {
       const seasonality = rpmSeasonality[m] || 1;
@@ -545,6 +545,13 @@ const SyndCard = ({ brand, data, config, setConfig, rpmSeasonality, hiringPlan }
   const updateSyndMOM = (i, v) => { const n = [...(config.syndication.momExtraViews || MONTHS.map(() => 0))]; n[i] = v; updateSyndication('momExtraViews', n); };
   const updateVidMOM = (i, v) => { const n = [...(config.msnVideos.momExtraEngagedViews || MONTHS.map(() => 0))]; n[i] = v; updateVideos('momExtraEngagedViews', n); };
 
+  // V12: Delete handler
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete "${brand}"? This will remove it from Syndication, Hiring, and all calculations. This action cannot be undone.`)) {
+      onDelete(brand);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 mb-6 border-l-4 border-purple-500">
       <div className="flex justify-between items-start mb-4">
@@ -552,9 +559,17 @@ const SyndCard = ({ brand, data, config, setConfig, rpmSeasonality, hiringPlan }
           <h3 className="text-xl font-bold text-gray-800">{brand}</h3>
           <div className="text-sm text-gray-500">Baseline: {fmt(data.revenue)}/mo</div>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-green-600">{fmt(totals.lh2Net)}</div>
-          <div className="text-xs text-gray-500">LH2 Net Earnings (10-mo)</div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-2xl font-bold text-green-600">{fmt(totals.lh2Net)}</div>
+            <div className="text-xs text-gray-500">LH2 Net Earnings (10-mo)</div>
+          </div>
+          {/* V12: Delete button */}
+          <button onClick={handleDelete} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete brand">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -687,9 +702,9 @@ const SyndCard = ({ brand, data, config, setConfig, rpmSeasonality, hiringPlan }
 };
 
 // ============================================
-// DISCOVER BRAND CARD
+// DISCOVER BRAND CARD (V12: Added onDelete prop)
 // ============================================
-const DiscCard = ({ brand, data, config, setConfig, rpmSeasonality }) => {
+const DiscCard = ({ brand, data, config, setConfig, rpmSeasonality, onDelete }) => {
   const proj = useMemo(() => MONTHS.map((m, i) => {
     const traffic = config.baseTraffic * (1 + (config.trafficGrowth[i] || 0) / 100);
     const isAfterTransition = i >= MONTHS.indexOf(config.transitionMonth);
@@ -724,6 +739,13 @@ const DiscCard = ({ brand, data, config, setConfig, rpmSeasonality }) => {
     lh2Rev: a.lh2Rev + p.lh2Rev, lh2Cost: a.lh2Cost + p.lh2Cost, lh2Net: a.lh2Net + p.lh2Net
   }), { rev: 0, totalCost: 0, lh2Rev: 0, lh2Cost: 0, lh2Net: 0 });
 
+  // V12: Delete handler
+  const handleDelete = () => {
+    if (confirm(`Are you sure you want to delete "${brand}"? This will remove it from Discover and all calculations. This action cannot be undone.`)) {
+      onDelete(brand);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 mb-6 border-l-4 border-green-500">
       <div className="flex justify-between items-start mb-4">
@@ -731,9 +753,17 @@ const DiscCard = ({ brand, data, config, setConfig, rpmSeasonality }) => {
           <h3 className="text-xl font-bold text-gray-800">{brand}</h3>
           <div className="text-sm text-gray-500">Base: {fmt(data.revenue)}/mo | {fmtNum(data.currentTraffic)} sessions</div>
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold text-green-600">{fmt(tot.lh2Net)}</div>
-          <div className="text-xs text-gray-500">LH2 Net (10-mo)</div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <div className="text-2xl font-bold text-green-600">{fmt(tot.lh2Net)}</div>
+            <div className="text-xs text-gray-500">LH2 Net (10-mo)</div>
+          </div>
+          {/* V12: Delete button */}
+          <button onClick={handleDelete} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete brand">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -1099,6 +1129,39 @@ export default function App() {
     }
   };
 
+  // V12: Delete Syndication Brand
+  const handleDeleteSyndBrand = (brandName) => {
+    setBaselineData(prev => {
+      const newSynd = { ...prev.syndication };
+      delete newSynd[brandName];
+      return { ...prev, syndication: newSynd };
+    });
+    setSyndConfigs(prev => {
+      const newConfigs = { ...prev };
+      delete newConfigs[brandName];
+      return newConfigs;
+    });
+    setHiringPlans(prev => {
+      const newPlans = { ...prev };
+      delete newPlans[brandName];
+      return newPlans;
+    });
+  };
+
+  // V12: Delete Discover Brand
+  const handleDeleteDiscBrand = (brandName) => {
+    setBaselineData(prev => {
+      const newDisc = { ...prev.discover };
+      delete newDisc[brandName];
+      return { ...prev, discover: newDisc };
+    });
+    setDiscConfigs(prev => {
+      const newConfigs = { ...prev };
+      delete newConfigs[brandName];
+      return newConfigs;
+    });
+  };
+
   // V11: Updated P&L calculations with brand-level detail for all required metrics
   const { pnl, brandPnl } = useMemo(() => {
     const syndBrandData = {};
@@ -1372,7 +1435,15 @@ export default function App() {
                   onToggle={() => toggleRow('lh2GrossProfit')}
                 />
                 
-                {/* f. LH2 Indirect Cost - Non-collapsible */}
+                {/* V12: f. SaaS Revenue - Non-collapsible */}
+                <SimpleRow 
+                  label="SaaS Revenue" 
+                  data={pnl.map(p => p.saasRevenue)} 
+                  total={totals.saasRevenue}
+                  color="green"
+                />
+                
+                {/* g. LH2 Indirect Cost - Non-collapsible */}
                 <SimpleRow 
                   label="LH2 Indirect Cost" 
                   data={pnl.map(p => p.indirectCost)} 
@@ -1380,7 +1451,7 @@ export default function App() {
                   color="red"
                 />
                 
-                {/* g. LH2 Net Profit - Non-collapsible, bold */}
+                {/* h. LH2 Net Profit - Non-collapsible, bold */}
                 <SimpleRow 
                   label="LH2 Net Profit" 
                   data={pnl.map(p => p.lh2NetProfit)} 
@@ -1392,7 +1463,6 @@ export default function App() {
             </table>
             <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
               <strong>Formula:</strong> LH2 Net Profit = LH2 Gross Profit + SaaS Revenue − Indirect Costs
-              {totals.saasRevenue > 0 && <span className="ml-2 text-green-600">| SaaS Revenue: {fmt(totals.saasRevenue)}</span>}
             </div>
           </div>
         )}
@@ -1407,7 +1477,7 @@ export default function App() {
               <button onClick={() => setShowAddBrandWizard(true)} className="px-3 py-1 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700">+ Add Syndication Brand</button>
             </div>
             {Object.entries(baselineData.syndication).map(([b, d]) => (
-              <SyndCard key={b} brand={b} data={d} config={syndConfigs[b]} setConfig={c => setSyndConfigs(p => ({ ...p, [b]: c }))} rpmSeasonality={rpmSeasonality} hiringPlan={hiringPlans[b] || getDefaultHiringPlan()} />
+              syndConfigs[b] && <SyndCard key={b} brand={b} data={d} config={syndConfigs[b]} setConfig={c => setSyndConfigs(p => ({ ...p, [b]: c }))} rpmSeasonality={rpmSeasonality} hiringPlan={hiringPlans[b] || getDefaultHiringPlan()} onDelete={handleDeleteSyndBrand} />
             ))}
           </div>
         )}
@@ -1422,7 +1492,7 @@ export default function App() {
               <button onClick={() => setShowAddBrandWizard(true)} className="px-3 py-1 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700">+ Add Discover Brand</button>
             </div>
             {Object.entries(baselineData.discover).map(([b, d]) => (
-              <DiscCard key={b} brand={b} data={d} config={discConfigs[b]} setConfig={c => setDiscConfigs(p => ({ ...p, [b]: c }))} rpmSeasonality={rpmSeasonality} />
+              discConfigs[b] && <DiscCard key={b} brand={b} data={d} config={discConfigs[b]} setConfig={c => setDiscConfigs(p => ({ ...p, [b]: c }))} rpmSeasonality={rpmSeasonality} onDelete={handleDeleteDiscBrand} />
             ))}
           </div>
         )}
@@ -1546,7 +1616,7 @@ export default function App() {
       </main>
       
       <footer className="bg-gray-800 text-gray-400 text-center py-3 mt-6 text-sm">
-        LH2 AOP Dashboard v11.0 | Indirect Costs & SaaS Revenue | {lastSaved && `Last saved: ${lastSaved}`}
+        LH2 AOP Dashboard v12.0 | Delete Brands + SaaS Row | {lastSaved && `Last saved: ${lastSaved}`}
       </footer>
 
       <AddBrandWizard isOpen={showAddBrandWizard} onClose={() => setShowAddBrandWizard(false)} onAddBrand={handleAddBrand} />
